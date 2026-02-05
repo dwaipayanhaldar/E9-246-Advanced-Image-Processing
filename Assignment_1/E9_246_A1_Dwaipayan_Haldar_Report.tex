@@ -1,0 +1,544 @@
+\documentclass[12pt,a4paper,onecolumn]{exam}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{geometry}
+\usepackage{tikz}
+\usepackage[skins]{tcolorbox} % Use [skins] to get the rounded shape
+
+
+% --- Define our simple \questionheader command ---
+\newcommand{\questionheader}[1]{%
+  \begin{tcolorbox}[
+    enhanced,
+    colback=black,
+    coltext=white,
+    boxrule=0pt,
+    fontupper=\Large\bfseries,
+    arc=4mm
+  ]
+  #1
+  \end{tcolorbox}%
+}
+% --- End of definition ---
+\newtcolorbox{answerbox}[1]{
+  boxrule=0.4pt,   % Sets the thickness of the border
+  colback=white,   % Sets the background color
+  height=#1,       % <-- Use the first argument (#1) as the height
+}
+
+
+\usepackage[font = small]{caption}
+\usepackage{subcaption}
+
+\newenvironment{blanksolution}
+  {%
+    \renewcommand{\solutiontitle}{\noindent}%
+    \begin{solution}%
+  }%
+  {\end{solution}}
+\usepackage{listings}
+
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily,
+    }
+
+\pagestyle{headandfoot}
+% \firstpageheader{Assignment 2}{}{Dwaipayan Haldar}
+\runningheader{Assignment 1}{Advanced Image Processing}{Dwaipayan Haldar}
+
+
+\begin{document}
+
+\begingroup
+    \centering
+    \LARGE E9 246 Advanced Image Processing\\
+    \LARGE Assignment 1\\[0.5em]
+    \large \today\\[0.5em]
+    \large Dwaipayan Haldar\par
+\endgroup
+\noindent\rule{\textwidth}{0.5pt}
+\printanswers
+\renewcommand{\solutiontitle}{\noindent\textbf{Ans:}\enspace}
+
+
+%****Question 1****
+
+\questionheader{1. Local Binary Pattern (LBP) for Texture Observation}
+
+\textbf{(a)}
+
+\begin{solution}
+The standard Local Binary Pattern (LBP) operator was applied to each image using a $3 \times 3$ neighborhood. For each pixel, the 8 neighboring pixels are compared with the center pixel, and a binary code is generated (1 if neighbor $\geq$ center, 0 otherwise). This produces a 256-bin histogram for each image.
+
+Using 1-Nearest Neighbor (1-NN) classification with Euclidean distance between histograms:
+
+\begin{center}
+\textbf{Classification Accuracy: 12.77\%}
+\end{center}
+
+The relatively low accuracy is expected given the large number of texture classes (47) and the sensitivity of standard LBP to geometric transformations. Fig.\ref{fig:1a} gives the confusion matrix of the same. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Output_Images/P01a.png}
+    \caption{Confusion matrix for 1-NN classification using standard LBP histograms on the DTD dataset (47 classes).}
+    \label{fig:1a}
+\end{figure}
+
+\end{solution}
+
+\textbf{(b) }
+
+\begin{solution}
+The test images were rotated by multiple angles (0°, 15°, 30°, 45°, 60°, 90°, 105°, 120°, 135°, 150°, 165°, 180°) and classification was performed using the same 1-NN approach.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Rotation Angle} & \textbf{Accuracy} \\
+\hline
+0° & 12.77\% \\
+15° & 5.53\% \\
+30° & 3.67\% \\
+45° & 2.29\% \\
+60° & 2.93\% \\
+90° & 4.41\% \\
+105° & 3.24\% \\
+120° & 2.82\% \\
+135° & 2.18\% \\
+150° & 2.98\% \\
+165° & 4.68\% \\
+180° & 12.50\% \\
+\hline
+\end{tabular}
+\caption{Classification accuracy vs rotation angle for standard LBP.}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Output_Images/P01b.png}
+    \caption{Effect of rotation on standard LBP-based texture classification accuracy.}
+\end{figure}
+
+\textbf{Observation:} The results clearly demonstrate that standard LBP is highly sensitive to rotation. The accuracy drops significantly for rotated images, with minimum accuracy at 45° and 135° rotations. Notably, 0° and 180° rotations maintain similar accuracy since 180° rotation preserves the relative ordering of some neighbor pairs. The pattern shows approximate symmetry around 90°.
+\end{solution}
+
+\textbf{(c) }
+
+\begin{solution}
+The rotation-invariant uniform LBP ($LBP^{riu2}$) descriptor was implemented. Consider $(01100110)_2$ and $(00110011)_2$, they are the same binary string under rotation. Those are grouped into one. So, there are 36 unique patterns like this. Further, we can consider those binary strings which has less than equal to 2 transitions as uniform and there are 9 such unique representations and rest all non-uniform representations into one. So there are finally 10 bins in the rotation invariant uniform LBP. Table.\ref{table:2} gives the comparison of the standard LBP with the rotation invariant LBP. Fig.\ref{fig:1c} presents the data visually.
+
+\textbf{Observation:} The rotation-invariant LBP shows more consistent performance across different rotation angles compared to standard LBP. While the absolute accuracy at 0° is lower (due to reduced discriminative power from fewer histogram bins), the RIU-LBP demonstrates improved stability under rotation. The accuracy variance across angles is smaller for RIU-LBP, confirming its rotation-invariant property. The trade-off is between rotation invariance and discriminative capability.
+
+\begin{table}[H]
+\centering
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Rotation Angle} & \textbf{Standard LBP} & \textbf{RIU-LBP} \\
+\hline
+0° & 12.77\% & 8.99\% \\
+15° & 5.53\% & 4.10\% \\
+30° & 3.67\% & 2.87\% \\
+45° & 2.29\% & 2.82\% \\
+60° & 2.93\% & 3.09\% \\
+90° & 4.41\% & 4.47\% \\
+105° & 3.24\% & 3.67\% \\
+120° & 2.82\% & 3.09\% \\
+135° & 2.18\% & 2.98\% \\
+150° & 2.98\% & 2.98\% \\
+165° & 4.68\% & 3.83\% \\
+180° & 12.50\% & 9.57\% \\
+\hline
+\end{tabular}
+\caption{Comparison of standard LBP and rotation-invariant LBP accuracy.}
+\label{table:2}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Output_Images/P01c.png}
+    \caption{Comparison of standard LBP and rotation-invariant LBP under various rotations.}
+    \label{fig:1c}
+\end{figure}
+
+
+\end{solution}
+
+
+%****Question 2****
+\questionheader{2. Adaptation to Sketch Domain}
+
+\textbf{(a)}
+
+\begin{solution}
+A ResNet18 model pretrained on ImageNet was fine-tuned on the ImageNet Sketch subset (100 classes). All layers were trainable during fine-tuning. The model achieves strong performance on the sketch domain. Fig.\ref{fig:2a} gives the loss curves and the accuracy curves per epoch for the data. 
+
+\textbf{Training Configuration:}
+\begin{itemize}
+    \item Optimizer: Adam (lr=0.0001, weight\_decay=1e-4)
+    \item Scheduler: StepLR (step\_size=5, gamma=0.1)
+    \item Epochs: 15
+    \item Batch size: 32
+    \item Data augmentation: Random affine transformations
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{|c|c|}
+\hline
+\textbf{Metric} & \textbf{Accuracy} \\
+\hline
+Training Accuracy & 96.48\% \\
+Validation Accuracy & 80.00\% \\
+\textbf{Test Accuracy} & \textbf{80.04\%} \\
+\hline
+\end{tabular}
+\label{table:3}
+\end{center}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Output_Images/P02a.png}
+    \caption{Training and validation loss/accuracy curves for full fine-tuning of ResNet18 on ImageNet-Sketch.}
+    \label{fig:2a}
+\end{figure}
+
+
+\end{solution}
+
+\textbf{(b)}
+
+\begin{solution}
+Feature maps from layers 1-4 of ResNet18 were visualized for 5 randomly selected test images, comparing the ImageNet-pretrained model (before fine-tuning) with the fine-tuned model.
+
+For each image, the top row shows feature maps from the \textbf{pretrained model} and the bottom row shows feature maps from the \textbf{fine-tuned model}. Each grid displays 64 feature map channels for each layer.
+
+\begin{figure}[H]
+    \centering
+    % Image 1
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01498041_1.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01498041_1_layer1_pretrained.png}
+        \caption*{Layer1 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01498041_1_layer2_pretrained.png}
+        \caption*{Layer2 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01498041_1_layer3_pretrained.png}
+        \caption*{Layer3 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01498041_1_layer4_pretrained.png}
+        \caption*{Layer4 (Pre)}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01498041_1.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01498041_1_layer1_finetuned.png}
+        \caption*{Layer1 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01498041_1_layer2_finetuned.png}
+        \caption*{Layer2 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01498041_1_layer3_finetuned.png}
+        \caption*{Layer3 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01498041_1_layer4_finetuned.png}
+        \caption*{Layer4 (FT)}
+    \end{subfigure}
+    \caption{Image 1: Feature maps comparison (Pre=Pretrained, FT=Fine-tuned)}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % Image 2
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01687978_2.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01687978_2_layer1_pretrained.png}
+        \caption*{Layer1 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01687978_2_layer2_pretrained.png}
+        \caption*{Layer2 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01687978_2_layer3_pretrained.png}
+        \caption*{Layer3 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01687978_2_layer4_pretrained.png}
+        \caption*{Layer4 (Pre)}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01687978_2.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01687978_2_layer1_finetuned.png}
+        \caption*{Layer1 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01687978_2_layer2_finetuned.png}
+        \caption*{Layer2 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01687978_2_layer3_finetuned.png}
+        \caption*{Layer3 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01687978_2_layer4_finetuned.png}
+        \caption*{Layer4 (FT)}
+    \end{subfigure}
+    \caption{Image 2: Feature maps comparison (Pre=Pretrained, FT=Fine-tuned)}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % Image 3
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01729322_3.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01729322_3_layer1_pretrained.png}
+        \caption*{Layer1 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01729322_3_layer2_pretrained.png}
+        \caption*{Layer2 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01729322_3_layer3_pretrained.png}
+        \caption*{Layer3 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01729322_3_layer4_pretrained.png}
+        \caption*{Layer4 (Pre)}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01729322_3.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01729322_3_layer1_finetuned.png}
+        \caption*{Layer1 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01729322_3_layer2_finetuned.png}
+        \caption*{Layer2 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01729322_3_layer3_finetuned.png}
+        \caption*{Layer3 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01729322_3_layer4_finetuned.png}
+        \caption*{Layer4 (FT)}
+    \end{subfigure}
+    \caption{Image 3: Feature maps comparison (Pre=Pretrained, FT=Fine-tuned)}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % Image 4
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01751748_4.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01751748_4_layer1_pretrained.png}
+        \caption*{Layer1 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01751748_4_layer2_pretrained.png}
+        \caption*{Layer2 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01751748_4_layer3_pretrained.png}
+        \caption*{Layer3 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01751748_4_layer4_pretrained.png}
+        \caption*{Layer4 (Pre)}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01751748_4.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01751748_4_layer1_finetuned.png}
+        \caption*{Layer1 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01751748_4_layer2_finetuned.png}
+        \caption*{Layer2 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01751748_4_layer3_finetuned.png}
+        \caption*{Layer3 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01751748_4_layer4_finetuned.png}
+        \caption*{Layer4 (FT)}
+    \end{subfigure}
+    \caption{Image 4: Feature maps comparison (Pre=Pretrained, FT=Fine-tuned)}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % Image 5
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01496331_5.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01496331_5_layer1_pretrained.png}
+        \caption*{Layer1 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01496331_5_layer2_pretrained.png}
+        \caption*{Layer2 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01496331_5_layer3_pretrained.png}
+        \caption*{Layer3 (Pre)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01496331_5_layer4_pretrained.png}
+        \caption*{Layer4 (Pre)}
+    \end{subfigure}
+
+    \begin{subfigure}[b]{0.15\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_original_n01496331_5.png}
+        \caption*{Original}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01496331_5_layer1_finetuned.png}
+        \caption*{Layer1 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01496331_5_layer2_finetuned.png}
+        \caption*{Layer2 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01496331_5_layer3_finetuned.png}
+        \caption*{Layer3 (FT)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.2\textwidth}
+        \includegraphics[width=\textwidth]{Output_Images/P02b_feature_maps_n01496331_5_layer4_finetuned.png}
+        \caption*{Layer4 (FT)}
+    \end{subfigure}
+    \caption{Image 5: Feature maps comparison (Pre=Pretrained, FT=Fine-tuned)}
+\end{figure}
+
+\textbf{Observations:}
+\begin{itemize}
+    \item \textbf{Early Layers (Layer1, Layer2):} Feature maps are relatively similar between pretrained and fine-tuned models. These layers detect low-level features like edges and basic shapes, which are useful for both natural images and sketches.
+
+    \item \textbf{Last Layer (Layer3, Layer4):} Fine-tuned models show sharper, more localized activations on sketch contours, while pretrained models have more diffuse activations due to their training on textured natural images.
+\end{itemize}
+\end{solution}
+
+\textbf{(c)}
+
+\begin{solution}
+ResNet18 was fine-tuned with all convolutional and fully-connected layer parameters frozen, updating only BatchNorm parameters ($\gamma$ and $\beta$) and the final classification layer.
+
+\textbf{Training Configuration:}
+\begin{itemize}
+    \item Optimizer: Adam (lr=0.001, weight\_decay=1e-4)
+    \item Scheduler: StepLR (step\_size=5, gamma=0.1)
+    \item Epochs: 15
+    \item Batch size: 32
+    \item Data augmentation: Random affine transformations
+\end{itemize}
+
+\textbf{Trainable Parameters:}
+\begin{itemize}
+    \item BatchNorm parameters: $\sim$9,600 parameters
+    \item Final FC layer: $\sim$51,300 parameters
+    \item Total trainable: $\sim$60,900 parameters ($\sim$0.5\% of total)
+\end{itemize}
+
+\textbf{Results:}
+\begin{center}
+\begin{tabular}{|c|c|c|}
+\hline
+\textbf{Metric} & \textbf{Full Fine-tuning} & \textbf{BatchNorm Only} \\
+\hline
+Training Accuracy & 96.48\% & 84.07\% \\
+Validation Accuracy & 80.00\% & 72.93\% \\
+\textbf{Test Accuracy} & \textbf{80.04\%} & \textbf{74.21\%} \\
+\hline
+\end{tabular}
+\end{center}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Output_Images/P02c.png}
+    \caption{Training curves for BatchNorm-only fine-tuning.}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{Output_Images/P02d.png}
+    \caption{Comparison of full fine-tuning vs BatchNorm-only fine-tuning.}
+\end{figure}
+
+\end{solution}
+
+\textbf{(d)}
+
+\begin{solution}
+\textbf{Observations:}
+
+BatchNorm-only fine-tuning achieves surprisingly good performance (74.21\%) despite training only $\sim$0.5\% of the parameters. The performance gap with full fine-tuning is only $\sim$6\%. With few hyper paramater tuning, it may be better than finetuning the whole model sometimes
+
+\textbf{Why BatchNorm Adaptation Works:}
+
+\begin{enumerate}
+    \item \textbf{Domain Shift is Statistical:} The primary difference between natural images and sketches lies in their statistical properties:
+    \begin{itemize}
+        \item Natural images: Rich colors, textures, varying intensities
+        \item Sketches: Binary-like (black lines on white), sparse activations, different intensity distributions
+    \end{itemize}
+
+    \item \textbf{BatchNorm's Role:} BatchNorm layers normalize activations using learned parameters:
+    \begin{equation}
+        \hat{x} = \gamma \cdot \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} + \beta
+    \end{equation}
+    By updating $\gamma$ (scale) and $\beta$ (shift), the network recalibrates feature responses for the new domain. This effectively ``re-centers'' and ``re-scales'' features to match sketch statistics.
+
+    \item \textbf{Feature Reuse:} The convolutional filters learned from ImageNet still detect meaningful patterns (edges, shapes) in sketches. BatchNorm adaptation allows the network to use these features with adjusted magnitudes appropriate for the sketch domain.
+
+    \item \textbf{Efficient Adaptation:} BatchNorm parameters are very few ($\sim$9K), making this an extremely parameter-efficient transfer learning technique.
+\end{enumerate}
+
+\textbf{Conclusion:} BatchNorm adaptation is effective for domain adaptation when the domains share similar low-level features and the main difference is in feature statistics. For sketches, both approaches work well because sketches still contain edge-like structures that ImageNet-trained filters can detect.
+\end{solution}
+
+
+
+
+\end{document}
