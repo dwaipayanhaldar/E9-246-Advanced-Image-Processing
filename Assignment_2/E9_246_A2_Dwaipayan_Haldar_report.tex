@@ -1,0 +1,326 @@
+\documentclass[12pt,a4paper,onecolumn]{exam}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\graphicspath{{output/}{Assignment_2/output/}}
+\usepackage{float}
+\usepackage{geometry}
+\usepackage{tikz}
+\usepackage[skins]{tcolorbox}
+\usepackage[font=small]{caption}
+\usepackage{booktabs}
+
+\newcommand{\questionheader}[1]{%
+  \begin{tcolorbox}[
+    enhanced,
+    colback=black,
+    coltext=white,
+    boxrule=0pt,
+    fontupper=\Large\bfseries,
+    arc=4mm
+  ]
+  #1
+  \end{tcolorbox}%
+}
+
+\newtcolorbox{answerbox}[1]{
+  boxrule=0.4pt,
+  colback=white,
+  height=#1,
+}
+
+\newenvironment{blanksolution}
+  {%
+    \renewcommand{\solutiontitle}{\noindent}%
+    \begin{solution}%
+  }%
+  {\end{solution}}
+
+\usepackage{listings}
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily,
+}
+
+\pagestyle{headandfoot}
+\runningheader{Assignment 2}{Advanced Image Processing}{Dwaipayan Haldar}
+
+\begin{document}
+
+\begingroup
+    \centering
+    \LARGE E9 246 Advanced Image Processing\\
+    \LARGE Assignment 2\\[0.5em]
+    \large \today\\[0.5em]
+    \large Dwaipayan Haldar\par
+\endgroup
+\noindent\rule{\textwidth}{0.5pt}
+\printanswers
+\renewcommand{\solutiontitle}{\noindent\textbf{Ans:}\enspace}
+
+\questionheader{1. Graph-Based Image Segmentation using Normalized Cuts}
+
+\textbf{(a)}
+
+\begin{solution}
+For the original affinity, I used
+\[
+w_{ij}^{(\mathrm{orig})}=\exp\!\left(-\frac{\|I(i)-I(j)\|^2}{\sigma_I^2}\right)
+\exp\!\left(-\frac{\|X(i)-X(j)\|^2}{\sigma_X^2}\right),
+\]
+and for the modified edge-aware affinity,
+\[
+w_{ij}^{(\mathrm{mod})}=w_{ij}^{(\mathrm{orig})}
+\exp\!\left(-\frac{E_{ij}^2}{\sigma_E^2}\right).
+\]
+Here, $E_{ij}$ is a local edge-strength term, so when a pair $(i,j)$ crosses a strong boundary, $E_{ij}$ is large and therefore $w_{ij}^{(\mathrm{mod})}\ll w_{ij}^{(\mathrm{orig})}$. This reduces inter-region coupling in the graph Laplacian and makes the second eigenvector partition align better with true object boundaries.
+
+The qualitative comparison on the four images (books, chess, football, zebra) is shown in Fig.~\ref{fig:p1a_books}--Fig.~\ref{fig:p1a_zebra}. In all cases, the modified affinity gives cleaner separation near high-gradient contours. Mathematically, since N-Cut minimizes
+\[
+\mathrm{Ncut}(A,B)=\frac{\mathrm{cut}(A,B)}{\mathrm{assoc}(A,V)}+\frac{\mathrm{cut}(A,B)}{\mathrm{assoc}(B,V)},
+\]
+the edge-aware term decreases cross-boundary weights in $\mathrm{cut}(A,B)$, so the minimizing partition prefers splitting along strong boundaries instead of intensity-only fluctuations.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/P01a_books.jpg_ncut_comparison.png}
+    \caption{Problem 1(a), books: Original affinity vs modified edge-aware affinity.}
+    \label{fig:p1a_books}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/P01a_chess.jpg_ncut_comparison.png}
+    \caption{Problem 1(a), chess: Original affinity vs modified edge-aware affinity.}
+    \label{fig:p1a_chess}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/P01a_football.jpg_ncut_comparison.png}
+    \caption{Problem 1(a), football: Original affinity vs modified edge-aware affinity.}
+    \label{fig:p1a_football}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/P01a_zebra.jpg_ncut_comparison.png}
+    \caption{Problem 1(a), zebra: Original affinity vs modified edge-aware affinity.}
+    \label{fig:p1a_zebra}
+\end{figure}
+\end{solution}
+
+\textbf{(b)}
+
+\begin{solution}
+I varied one parameter at a time with the other fixed and compared segmentations for zebra and football. Representative outputs are shown below as individual figures.
+
+When $\sigma_I$ is small, the factor $\exp(-\|I(i)-I(j)\|^2/\sigma_I^2)$ decays rapidly, so even moderate intensity differences suppress affinity. This increases local fragmentation and causes over-segmentation. As $\sigma_I$ increases, intensity contrast is down-weighted and many pixels remain strongly connected, which moves toward under-segmentation. Empirically, $\sigma_I\in[0.1,0.2]$ produced better boundary localization than the extreme values.
+
+For this implementation, the observed trend with $\sigma_X$ is the opposite: small $\sigma_X$ gives poorer splits and behaves as under-segmentation, while larger $\sigma_X$ gives cleaner and more correct partitions. This is consistent with the specific graph construction in code: a full pairwise affinity is built and then hard-thresholded ($W_{ij}<10^{-3}\rightarrow0$). With very small $\sigma_X$, most spatially separated connections are exponentially suppressed and then removed, so the graph becomes too sparse and the bipartition is less informative. Increasing $\sigma_X$ preserves more meaningful affinities, improves connectivity structure, and yields better boundary-consistent segmentation in the shown results.
+
+For the modified affinity, the edge term is weighted by
+\[
+\exp\!\left(-\frac{\|G_i-G_j\|^2}{2\sigma_E^2}\right),
+\]
+with $G$ the normalized gradient magnitude. If $\sigma_E$ is too small, this factor becomes dominant relative to intensity and spatial terms, and many pairwise weights collapse toward zero; the effective graph then becomes unstable/noisy. This explains the near-noise behavior visible in Fig.~\ref{fig:p1b_sigmai_low_zebra}. For moderate $\sigma_E$, the three components remain comparable in strength and the segmentation stays more consistent while still respecting boundaries.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/NCut_sigma_I_0.01_Zebra.png}
+    \caption{Problem 1(b): Effect of varying $\sigma_I$ with fixed $\sigma_X,\sigma_E$ ($\sigma_I=0.01$, zebra).}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/NCut_sigma_I_1.0_Zebra.png}
+    \caption{Problem 1(b): Effect of varying $\sigma_I$ with fixed $\sigma_X,\sigma_E$ ($\sigma_I=1.0$, zebra).}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/NCut_sigma_I_0.01_Football.png}
+    \caption{Problem 1(b): Effect of varying $\sigma_I$ with fixed $\sigma_X,\sigma_E$ ($\sigma_I=0.01$, football).}
+    \label{fig:p1b_sigmai_low_zebra}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/NCut_sigma_I_1.0_Football.png}
+    \caption{Problem 1(b): Effect of varying $\sigma_I$ with fixed $\sigma_X,\sigma_E$ ($\sigma_I=1.0$, football).}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/NCut_sigma_X_1.0_Zebra.png}
+    \caption{Problem 1(b): Effect of varying $\sigma_X$ with fixed $\sigma_I,\sigma_E$ ($\sigma_X=1.0$, zebra).}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/NCut_sigma_X_20.0_Zebra.png}
+    \caption{Problem 1(b): Effect of varying $\sigma_X$ with fixed $\sigma_I,\sigma_E$ ($\sigma_X=20.0$, zebra).}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/NCut_sigma_X_1.0_Football.png}
+    \caption{Problem 1(b): Effect of varying $\sigma_X$ with fixed $\sigma_I,\sigma_E$ ($\sigma_X=1.0$, football).}
+    \label{fig:p1b_sigmax_low_football}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/NCut_sigma_X_20.0_Football.png}
+    \caption{Problem 1(b): Effect of varying $\sigma_X$ with fixed $\sigma_I,\sigma_E$ ($\sigma_X=20.0$, football).}
+\end{figure}
+\end{solution}
+
+\textbf{(c)}
+
+\begin{solution}
+I implemented two multi-way strategies: recursive two-way splitting and simultaneous partitioning using multiple eigenvectors followed by discretization. In recursive splitting, the partition tree is built greedily by repeatedly solving a binary cut; in simultaneous partitioning, the embedding uses the first $k$ non-trivial eigenvectors and assigns labels jointly.
+
+The comparisons are shown in Fig.~\ref{fig:p1c_books}--Fig.~\ref{fig:p1c_zebra}. In addition to recursive vs simultaneous partitioning, the figures also show original affinity vs modified affinity. The modified affinity produces many thin edge fragments (edge segments), while the original affinity gives fewer and larger regions. This indicates that the edge term is strongly influencing the graph weights and increasing boundary sensitivity.
+
+Mathematically, with
+\[
+w_{ij}^{(\mathrm{mod})}=w_{ij}^{(\mathrm{orig})}\exp\!\left(-\frac{\|G_i-G_j\|^2}{2\sigma_E^2}\right),
+\]
+large gradient differences suppress cross-edge connections very aggressively. In multi-way splitting, this can create several small boundary-driven components that visually look like noise. This behavior is likely because the edge component has comparable or stronger scale than the intensity/spatial components for the chosen parameters, so edge contrast dominates the partition objective. Recursive splitting still tends to produce more local fragments, whereas simultaneous partitioning is relatively more consistent globally.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/P01c_books.jpg_multi_cut_comparison.png}
+    \caption{Problem 1(c), books: Recursive two-way N-Cut vs simultaneous multi-eigenvector partitioning.}
+    \label{fig:p1c_books}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/P01c_chess.jpg_multi_cut_comparison.png}
+    \caption{Problem 1(c), chess: Recursive two-way N-Cut vs simultaneous multi-eigenvector partitioning.}
+    \label{fig:p1c_chess}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/P01c_football.jpg_multi_cut_comparison.png}
+    \caption{Problem 1(c), football: Recursive two-way N-Cut vs simultaneous multi-eigenvector partitioning.}
+    \label{fig:p1c_football}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{output/P01c_zebra.jpg_multi_cut_comparison.png}
+    \caption{Problem 1(c), zebra: Recursive two-way N-Cut vs simultaneous multi-eigenvector partitioning.}
+    \label{fig:p1c_zebra}
+\end{figure}
+\end{solution}
+
+\questionheader{2. Semantic Segmentation with Different Decoder Designs}
+
+\textbf{(a)}
+
+\begin{solution}
+I implemented FCN-32s with a ResNet18 encoder and a single-stage decoder.
+The decoder upsamples the deepest feature map directly to full resolution, without intermediate skip features.
+The model tensor dimensions are
+\[
+[1,3,512,512]\rightarrow[1,2,512,512],
+\]
+with 11,185,730 trainable parameters.
+
+After training (15 epochs), test performance is:
+\[
+\text{Pixel Accuracy}=0.9778,\qquad \text{mIoU}=0.6650.
+\]
+Per-class IoU is $0.9776$ (background) and $0.3524$ (person). The low person IoU relative to background indicates that direct coarse-to-fine upsampling loses fine boundary detail for the minority foreground class.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{output/fcn32s_training_curves.png}
+    \caption{Problem 2(a): FCN-32s training curves.}
+    \label{fig:fcn32s_curves}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{output/fcn32s_qualitative.png}
+    \caption{Problem 2(a): FCN-32s qualitative predictions.}
+    \label{fig:fcn32s_qual}
+\end{figure}
+\end{solution}
+
+\textbf{(b)}
+
+\begin{solution}
+I implemented FCN-8s with progressive multi-stage upsampling and skip connections
+from two shallower encoder depths. The model output size is again $[1,2,512,512]$,
+with 11,178,886 trainable parameters.
+
+The encoder is ResNet18 split at three scales:
+\[
+\begin{aligned}
+\text{pool3}&:[B,128,H/8,W/8],\\
+\text{pool4}&:[B,256,H/16,W/16],\\
+\text{pool5}&:[B,512,H/32,W/32].
+\end{aligned}
+\]
+After $1\times1$ class scorers on each level, the decoder performs skip-fusion as
+\[
+\hat{S}_{16}=\operatorname{Up}_{2}(S_5)+S_4,\qquad
+\hat{S}_{8}=\operatorname{Up}_{2}(\hat{S}_{16})+S_3,\qquad
+\hat{Y}=\operatorname{Up}_{8}(\hat{S}_{8}),
+\]
+where $S_5,S_4,S_3$ are class-score maps from pool5, pool4, and pool3.
+Also, $\operatorname{Up}_{2},\operatorname{Up}_{8}$ are transposed-convolution upsamplers.
+For $512\times512$ input, this gives
+\[
+\begin{aligned}
+[B,C,16,16]&\rightarrow[B,C,32,32]\\
+&\rightarrow[B,C,64,64]\\
+&\rightarrow[B,C,512,512].
+\end{aligned}
+\]
+
+After training (20 epochs), test performance is:
+\[
+\text{Pixel Accuracy}=0.9960,\qquad \text{mIoU}=0.9056.
+\]
+Per-class IoU is $0.9960$ (background) and $0.8152$ (person). Compared to FCN-32s, the person IoU gain is substantial, confirming that skip-fused higher-resolution features preserve shape and boundary cues that are absent in single-stage decoding.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{output/fcn8s_training_curves.png}
+    \caption{Problem 2(b): FCN-8s training curves.}
+    \label{fig:fcn8s_curves}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.98\textwidth]{output/fcn8s_qualitative.png}
+    \caption{Problem 2(b): FCN-8s qualitative predictions.}
+    \label{fig:fcn8s_qual}
+\end{figure}
+\end{solution}
+
+\textbf{(c)}
+
+\begin{solution}
+Quantitatively, FCN-8s outperforms FCN-32s on both metrics:
+\[
+\Delta\text{Pixel Accuracy}=0.9960-0.9778=0.0182,
+\]
+\[
+\Delta\text{mIoU}=0.9056-0.6650=0.2406.
+\]
+For the foreground class, the improvement is
+\[
+\Delta\text{IoU}_{\text{person}}=0.8152-0.3524=0.4628.
+\]
+These gaps are consistent with the decoder design: progressive upsampling decreases aliasing from coarse logits, and skip connections inject high-frequency encoder information. As a result, boundary transitions are sharper and thin person structures are retained more reliably. In contrast, direct $32\times$ upsampling from deep low-resolution features causes boundary smoothing and foreground erosion.
+
+\begin{table}[H]
+    \centering
+    \caption{Test-set comparison of decoder designs.}
+    \begin{tabular}{lccc}
+        \toprule
+        Model & Pixel Accuracy & mIoU & Person IoU \\
+        \midrule
+        FCN-32s & 0.9778 & 0.6650 & 0.3524 \\
+        FCN-8s  & 0.9960 & 0.9056 & 0.8152 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+\end{solution}
+
+\end{document}
